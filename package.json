@@ -1,0 +1,15 @@
+{
+  "name": "ruang-seduh",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portofolio toko kopi Ruang Seduh",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node scripts/seed.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
