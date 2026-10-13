@@ -58,11 +58,21 @@ database.exec(`
   );
 `);
 
+app.set('trust proxy', 'loopback');
 app.use(express.json());
 app.use(express.static(path.join(ROOT, 'public')));
 app.get('/', (request, response) => {
   const html = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
   response.type('html').send(html.replace('__TOKO_WHATSAPP__', process.env.TOKO_WHATSAPP || ''));
+});
+
+app.get('/healthz', (request, response) => {
+  try {
+    database.prepare('SELECT 1').get();
+    response.status(200).json({ status: 'ok' });
+  } catch (error) {
+    response.status(503).json({ status: 'error' });
+  }
 });
 
 app.get('/api/products', (request, response) => {
@@ -207,5 +217,7 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, (request, response) => {
   response.json({ message: 'Status pesanan diperbarui.' });
 });
 
-const port = 3000;
-app.listen(port, '127.0.0.1', () => console.log(`Ruang Seduh berjalan di http://127.0.0.1:${port}`));
+const host = process.env.HOST || '127.0.0.1';
+const port = Number(process.env.PORT) || 3000;
+if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT harus berupa angka antara 1 dan 65535.');
+app.listen(port, host, () => console.log(`Ruang Seduh berjalan di http://${host}:${port}`));

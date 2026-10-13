@@ -8,6 +8,7 @@
     "start": "node server.js",
     "seed": "node scripts/seed.js",
     "create-admin": "node scripts/create-admin.js",
+    "backup": "node scripts/backup.js",
     "test": "node --test"
   },
   "dependencies": {
