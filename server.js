@@ -16,7 +16,9 @@ if (fs.existsSync(envPath)) {
 }
 
 const app = express();
-const database = new DatabaseSync(path.join(ROOT, 'data', 'ruang-seduh.sqlite'));
+const databasePath = process.env.DATABASE_PATH || path.join(ROOT, 'data', 'ruang-seduh.sqlite');
+fs.mkdirSync(path.dirname(path.resolve(databasePath)), { recursive: true });
+const database = new DatabaseSync(databasePath);
 const COOKIE_NAME = 'ruang_seduh_session';
 const SESSION_HOURS = 8;
 const ALLOWED_STATUSES = ['baru', 'diproses', 'selesai', 'dibatalkan'];
@@ -223,4 +225,6 @@ app.patch('/api/admin/orders/:id/status', requireAdmin, (request, response) => {
 const host = process.env.HOST || '127.0.0.1';
 const port = Number(process.env.PORT) || 3000;
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT harus berupa angka antara 1 dan 65535.');
-app.listen(port, host, () => console.log(`Ruang Seduh berjalan di http://${host}:${port}`));
+if (require.main === module) app.listen(port, host, () => console.log(`Ruang Seduh berjalan di http://${host}:${port}`));
+
+module.exports = app;
