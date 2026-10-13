@@ -110,7 +110,10 @@ function parseCookies(request) {
     return [pair.slice(0, index).trim(), decodeURIComponent(pair.slice(index + 1).trim())];
   }));
 }
-function tokenDigest(token) { return crypto.createHash('sha256').update(token).digest(); }
+function tokenDigest(token) {
+  // Cookie berisi token dalam format hex; hash kembali bytes aslinya agar cocok dengan database.
+  return crypto.createHash('sha256').update(Buffer.from(token, 'hex')).digest();
+}
 function cookieSecure() { return String(process.env.COOKIE_SECURE).toLowerCase() === 'true'; }
 function setSessionCookie(response, token) {
   const flags = [`${COOKIE_NAME}=${encodeURIComponent(token)}`, 'Path=/', 'HttpOnly', 'SameSite=Strict', 'Max-Age=' + SESSION_HOURS * 3600];
