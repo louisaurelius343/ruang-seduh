@@ -30,7 +30,7 @@ Aplikasi tersedia di `http://127.0.0.1:3000`. Buat akun admin dengan `npm run cr
 
 ## Deploy di belakang Caddy
 
-Jalankan aplikasi pada host loopback, misalnya `HOST=127.0.0.1` dan `PORT=3000`. Reverse proxy yang sudah ada dapat meneruskan trafik HTTPS ke alamat tersebut. Pastikan `COOKIE_SECURE=true` saat akses publik memakai HTTPS. Konfigurasi Caddy dan service dikelola di luar repository ini.
+Jalankan aplikasi pada host loopback, misalnya `HOST=127.0.0.1` dan `PORT=3000`. Reverse proxy yang sudah ada dapat meneruskan trafik HTTPS ke alamat tersebut. Pastikan `COOKIE_SECURE=true` saat akses publik memakai HTTPS. Service produksi harus memuat file `.env` dengan `EnvironmentFile=/home/budi/.openclaw/workspace/ruang-seduh/.env` (atau path `.env` yang sesuai) agar `TOKO_WHATSAPP` dan konfigurasi lain tersedia untuk proses Node. Konfigurasi Caddy dan service dikelola di luar repository ini.
 
 Periksa aplikasi dengan:
 

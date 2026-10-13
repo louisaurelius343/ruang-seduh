@@ -60,11 +60,14 @@ database.exec(`
 
 app.set('trust proxy', 'loopback');
 app.use(express.json());
-app.use(express.static(path.join(ROOT, 'public')));
-app.get('/', (request, response) => {
+function sendIndex(request, response) {
   const html = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
   response.type('html').send(html.replace('__TOKO_WHATSAPP__', process.env.TOKO_WHATSAPP || ''));
-});
+}
+// index.html harus melewati injeksi nomor WhatsApp sebelum static file handler.
+app.get('/', sendIndex);
+app.get('/index.html', sendIndex);
+app.use(express.static(path.join(ROOT, 'public'), { index: false }));
 
 app.get('/healthz', (request, response) => {
   try {
