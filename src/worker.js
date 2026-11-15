@@ -125,16 +125,17 @@ async function photo(request, url, ctx, env) {
   if (!photoPerIp(clientIp(request))) return json({ error: 'terlalu banyak permintaan' }, 429, { 'retry-after': '5' });
 
   const q = new URLSearchParams({
-    fields: 'id,thumb_1024_url,captured_at,compass_angle,computed_geometry',
-    bbox: bbox(p.lat, p.lon, 60).join(','),
-    limit: '30',
+    fields: 'id,thumb_1024_url,thumb_256_url,captured_at,compass_angle,computed_compass_angle,computed_geometry,geometry',
+    bbox: bbox(p.lat, p.lon, 120).join(','),
+    limit: '50',
   });
   const res = await fetch(`https://graph.mapillary.com/images?${q}`, {
     headers: { authorization: `OAuth ${env.MAPILLARY_TOKEN}`, 'user-agent': UA },
   });
   if (!res.ok) throw new Error(`mapillary ${res.status}`);
-  const best = pickPhoto((await res.json()).data, p.lat, p.lon);
-  const out = best ?? { found: false };
+  const data = (await res.json()).data ?? [];
+  const best = pickPhoto(data, p.lat, p.lon);
+  const out = best ?? { found: false, checked: data.length }; // checked: jumlah foto Mapillary di sekitar sebelum disaring
   if (best) out.found = true;
   store(ctx, p.key, JSON.stringify(out), best ? PHOTO_TTL : 24 * 3600); // hasil kosong: 1 hari
   return json(out, 200, { 'x-cache': 'MISS', 'cache-control': 'public, max-age=3600' });

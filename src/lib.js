@@ -70,7 +70,7 @@ export function photoParams(sp) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -12 || lat > 7 || lon < 94 || lon > 142) return { error: 'lat/lon tidak valid' };
   const rl = Math.round(lat * 1e4) / 1e4;
   const ro = Math.round(lon * 1e4) / 1e4;
-  return { lat: rl, lon: ro, key: `https://cache.ruangseduh.cloud/photo/v1/${rl.toFixed(4)}/${ro.toFixed(4)}` };
+  return { lat: rl, lon: ro, key: `https://cache.ruangseduh.cloud/photo/v2/${rl.toFixed(4)}/${ro.toFixed(4)}` };
 }
 
 /** Kotak pencarian ~d meter di sekitar titik: [minLon, minLat, maxLon, maxLat]. */
@@ -94,22 +94,24 @@ function bearing(lat1, lon1, lat2, lon2) {
 export function pickPhoto(images, lat, lon, nowMs = Date.now()) {
   let best = null;
   for (const im of images ?? []) {
-    const c = im.computed_geometry?.coordinates;
-    if (!im.thumb_1024_url || !c) continue;
+    const c = im.computed_geometry?.coordinates ?? im.geometry?.coordinates;
+    const url = im.thumb_1024_url ?? im.thumb_2048_url ?? im.thumb_256_url;
+    if (!url || !c) continue;
     const [ilon, ilat] = c;
     const dy = (lat - ilat) * 111320;
     const dx = (lon - ilon) * 111320 * Math.cos((lat * Math.PI) / 180);
     const dist = Math.hypot(dx, dy);
-    if (dist > 80) continue;
+    if (dist > 120) continue;
     let angle = 90; // tanpa arah kamera: anggap sedang
-    if (typeof im.compass_angle === 'number' && dist > 3) {
-      const diff = Math.abs(((bearing(ilat, ilon, lat, lon) - im.compass_angle + 540) % 360) - 180);
-      angle = diff;
+    const heading = im.computed_compass_angle ?? im.compass_angle;
+    if (typeof heading === 'number' && dist > 3) {
+      angle = Math.abs(((bearing(ilat, ilon, lat, lon) - heading + 540) % 360) - 180);
     }
-    if (angle > 100) continue; // kamera membelakangi tempat
+    if (angle > 135) continue; // kamera jelas membelakangi tempat
     const years = im.captured_at ? (nowMs - im.captured_at) / (365.25 * 864e5) : 5;
-    const score = dist + angle * 0.4 + Math.max(0, years - 2) * 6;
-    if (!best || score < best.score) best = { score, id: im.id, url: im.thumb_1024_url, captured: im.captured_at ?? null };
+    const score = dist + angle * 0.3 + Math.max(0, years - 3) * 4;
+    im.url = url;
+    if (!best || score < best.score) best = { score, id: im.id, url: im.url, captured: im.captured_at ?? null };
   }
   return best && { id: best.id, url: best.url, captured: best.captured, source: 'mapillary' };
 }
