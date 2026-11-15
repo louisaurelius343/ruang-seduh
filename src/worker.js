@@ -48,6 +48,8 @@ async function places(request, url, ctx) {
   const key = placesCacheKey(p);
   const hit = await cached(key);
   if (hit) return json(await hit.json(), 200, { 'x-cache': 'HIT', 'cache-control': 'public, max-age=3600' });
+  // cache=only: cek cache saja (cepat). Overpass sering menolak IP Cloudflare, jadi browser yang bertanya langsung.
+  if (url.searchParams.get('cache') === 'only') return json({ cached: false }, 404, { 'x-cache': 'MISS' });
   if (!perIp(clientIp(request))) return json({ error: 'terlalu banyak permintaan, coba lagi sebentar' }, 429, { 'retry-after': '10' });
 
   const osm = slimOverpass(await hedgedOverpass(overpassQuery(p)));

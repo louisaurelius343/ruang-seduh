@@ -102,9 +102,9 @@ function statusOf(p, now) {
   return { open: s.open, openLabel: s.label };
 }
 
-async function api(path, params) {
+async function api(path, params, timeoutMs = 35000) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 35000);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(`/api/${path}?${new URLSearchParams(params)}`, { signal: ctrl.signal });
     const data = await res.json().catch(() => ({}));
@@ -119,28 +119,37 @@ async function api(path, params) {
 
 // Cadangan: kalau Worker gagal menjangkau Overpass (IP Cloudflare kadang dibatasi), browser bertanya langsung.
 // Satu server dulu; server berikutnya hanya bila yang sebelumnya gagal.
-const OVERPASS_DIRECT = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+// Server utama kadang sangat lambat (20-40 detik) tapi tetap menjawab; jadi diberi waktu panjang.
+const OVERPASS_DIRECT = [
+  ['https://overpass-api.de/api/interpreter', 60000],
+  ['https://overpass.private.coffee/api/interpreter', 30000],
+];
 async function directOverpass(lat, lon, r, cats) {
   const body = new URLSearchParams({ data: buildOverpassQuery(round3(lat), round3(lon), r, cats) });
+  const slow = setTimeout(() => setStatus('Server data peta sedang lambat, mohon tunggu sebentar… ☕'), 8000);
   let last;
-  for (const url of OVERPASS_DIRECT) {
-    try {
-      const res = await fetch(url, { method: 'POST', body, signal: AbortSignal.timeout(25000) });
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      const data = await res.json();
-      if (Array.isArray(data.elements)) return data;
-    } catch (e) { last = e; }
+  try {
+    for (const [url, ms] of OVERPASS_DIRECT) {
+      try {
+        const res = await fetch(url, { method: 'POST', body, signal: AbortSignal.timeout(ms) });
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const data = await res.json();
+        if (Array.isArray(data.elements)) return data;
+      } catch (e) { last = e; }
+    }
+  } finally {
+    clearTimeout(slow);
   }
   throw new Error(last?.name === 'TimeoutError' ? 'waktu habis' : 'server data peta sedang sibuk');
 }
 
+/** Cek cache bersama di Worker dulu (cepat); kalau belum ada, browser bertanya langsung ke Overpass. */
 async function apiPlaces(lat, lon, r, cats) {
   try {
-    return await api('places', { lat: round3(lat), lon: round3(lon), r, cats: cats.join(',') });
-  } catch (e) {
-    if (/terlalu banyak/.test(e.message)) throw e; // rate limit: jangan dibanjiri lewat jalur lain
-    return directOverpass(lat, lon, r, cats);
-  }
+    const hit = await api('places', { lat: round3(lat), lon: round3(lon), r, cats: cats.join(','), cache: 'only' }, 4000);
+    if (Array.isArray(hit.elements)) return hit;
+  } catch { /* belum ada di cache / Worker lambat */ }
+  return directOverpass(lat, lon, r, cats);
 }
 
 function readCache(key) {
