@@ -2,7 +2,7 @@
 
 Ruang Seduh mencari kafe dan tempat nongkrong di sekitarmu. Tekan **Di sekitarku** atau ketik nama area, lalu lihat tempat terdekat di peta beserta jaraknya, jam buka, ketersediaan WiFi, dan tempat duduk outdoor. Tombol **Arahkan** membuka navigasi di Google Maps.
 
-ðŸ”— https://ruangseduh.cloud
+🔗 https://ruangseduh.cloud
 
 ## Fitur
 - Lokasi pengguna (Geolocation) atau pencarian area (Nominatim, khusus Indonesia).
@@ -36,6 +36,6 @@ Setelah `npm run dev`, buka http://localhost:5173.
 - **v2:** dirombak total menjadi pencari kafe berbasis peta. Server dan database dihapus, sehingga situs bisa di-hosting gratis tanpa perawatan.
 
 ## Kredit data
-Â© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL. Kelengkapan jam buka dan fasilitas tergantung kontribusi komunitas.
+© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL. Kelengkapan jam buka dan fasilitas tergantung kontribusi komunitas.
 
 Lisensi kode: MIT (lihat `LICENSE`).
