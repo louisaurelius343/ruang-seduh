@@ -1,17 +1,11 @@
 {
   "name": "ruang-seduh",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Portofolio toko kopi Ruang Seduh",
-  "main": "server.js",
+  "type": "module",
+  "description": "Ruang Seduh v2 - cari kafe dan tempat nongkrong terdekat",
   "scripts": {
-    "start": "node server.js",
-    "seed": "node scripts/seed.js",
-    "create-admin": "node scripts/create-admin.js",
-    "backup": "node scripts/backup.js",
-    "test": "node --test"
-  },
-  "dependencies": {
-    "express": "^5.1.0"
+    "test": "node --test",
+    "dev": "npx --yes serve@14.2.4 public -l 5173"
   }
 }
