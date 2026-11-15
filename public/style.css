@@ -249,3 +249,19 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
   .card .cover { height: 96px; }
   .foot { display: none; }
 }
+
+/* ---------- halaman teks (privasi) ---------- */
+.prose { max-width: 680px; margin: 0 auto; padding: 48px 22px 64px; line-height: 1.7; }
+.prose h1 { font: 500 42px/1.1 var(--serif); letter-spacing: -1px; margin: 6px 0 12px; }
+.prose h2 { font: 600 20px var(--serif); margin: 32px 0 8px; }
+.prose ul { padding-left: 20px; } .prose li { margin: 6px 0; color: var(--ink-2); }
+.prose .eyebrow a { color: inherit; text-decoration: none; }
+.privacy-note { font-size: 12px; color: var(--muted); margin: 14px 0 0; max-width: 40ch; }
+.privacy-note a { color: var(--ink-2); }
+
+/* ---------- aksesibilitas ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+.skip { position: absolute; left: -999px; top: 8px; z-index: 3000; background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; }
+.skip:focus { left: 8px; }

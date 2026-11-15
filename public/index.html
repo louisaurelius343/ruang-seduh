@@ -10,6 +10,11 @@
   <meta property="og:title" content="Ruang Seduh · Cari kafe terdekat">
   <meta property="og:description" content="Kafe dan tempat nongkrong di sekitarmu, lengkap dengan jarak, jam buka, dan fasilitas.">
   <meta property="og:url" content="https://ruangseduh.cloud/">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="id_ID">
+  <meta name="twitter:card" content="summary">
+  <link rel="canonical" href="https://ruangseduh.cloud/">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Ruang Seduh","url":"https://ruangseduh.cloud/","applicationCategory":"TravelApplication","operatingSystem":"Web","inLanguage":"id","description":"Cari kafe dan tempat nongkrong terdekat di Indonesia, lengkap dengan jarak, jam buka, dan fasilitas.","offers":{"@type":"Offer","price":"0","priceCurrency":"IDR"}}</script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="style.css">
@@ -45,6 +50,7 @@
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r=".9"/><circle cx="3.5" cy="12" r=".9"/><circle cx="3.5" cy="18" r=".9"/></symbol>
   </svg>
 
+  <a class="skip" href="#list">Lewati ke daftar tempat</a>
   <header class="top">
     <a class="brand" href="./" aria-label="Ruang Seduh, beranda">
       <span class="brand-mark"><svg><use href="#i-cup"/></svg></span>
@@ -66,6 +72,7 @@
         <h1>Mau ngopi <em>di mana</em> hari ini?</h1>
         <p class="lede">Temukan kafe dan tempat nongkrong terdekat, lengkap dengan jarak, jam buka, dan fasilitasnya.</p>
         <button class="btn primary lg" type="button" data-action="locate"><svg><use href="#i-locate"/></svg>Cari di sekitarku</button>
+        <p class="privacy-note">Lokasimu dibulatkan ±100 m sebelum dikirim dan tidak disimpan. <a href="/privasi.html">Selengkapnya</a></p>
         <p class="quick-label">Atau coba area populer</p>
         <div class="quick">
           <button type="button" data-area="Dago, Bandung">Dago, Bandung</button>
@@ -119,7 +126,7 @@
 
   <footer class="foot">
     <span>Data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> · foto dari Wikimedia Commons bila tersedia</span>
-    <a href="https://github.com/louisaurelius343/ruang-seduh" target="_blank" rel="noopener">Kode sumber</a>
+    <span><a href="/privasi.html">Privasi</a> · <a href="https://github.com/louisaurelius343/ruang-seduh" target="_blank" rel="noopener">Kode sumber</a></span>
   </footer>
 
   <script src="vendor/leaflet/leaflet.js"></script>

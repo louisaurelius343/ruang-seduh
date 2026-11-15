@@ -1,14 +1,10 @@
 import {
-  buildOverpassQuery, parsePlaces, openStatus, weeklyTable, formatDistance, walkMinutes, directionsUrl, commonsThumb,
+  parsePlaces, openStatus, weeklyTable, formatDistance, walkMinutes, directionsUrl, commonsThumb,
 } from './core.js';
 
-// Server Overpass publik kadang penuh; semua ditanya bersamaan, jawaban sukses pertama yang dipakai.
-const OVERPASS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-];
-const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+// Data lewat Worker kita sendiri (/api/*): cache bersama di edge, rate limit, dan User-Agent yang sesuai
+// kebijakan OpenStreetMap. Koordinat dibulatkan ~100 m sebelum dikirim (privasi).
+const round3 = (x) => Math.round(x * 1000) / 1000;
 const WIKIDATA = 'https://www.wikidata.org/w/api.php';
 const DEFAULT_VIEW = [-2.5, 117.5]; // Indonesia
 const FAV_KEY = 'ruangseduh.favorit';
@@ -82,7 +78,7 @@ async function fetchPlaces() {
   const key = `${origin.lat.toFixed(3)},${origin.lon.toFixed(3)}|${radius}|${cats.join('+')}`;
   const ticket = ++requestSeq;
   try {
-    const osm = readCache(key) ?? await queryOverpass(buildOverpassQuery(origin.lat, origin.lon, radius, cats));
+    const osm = readCache(key) ?? await apiPlaces(origin.lat, origin.lon, radius, cats);
     if (ticket !== requestSeq) return;
     writeCache(key, osm);
     const now = new Date();
@@ -106,24 +102,22 @@ function statusOf(p, now) {
   return { open: s.open, openLabel: s.label };
 }
 
-async function queryOverpass(query) {
+async function api(path, params) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 35000);
-  const body = new URLSearchParams({ data: query });
+  const timer = setTimeout(() => ctrl.abort(), 40000);
   try {
-    return await Promise.any(OVERPASS.map(async (url) => {
-      const res = await fetch(url, { method: 'POST', body, signal: ctrl.signal });
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      const json = await res.json();
-      if (!Array.isArray(json.elements)) throw new Error('format tidak dikenal');
-      return json;
-    })).finally(() => ctrl.abort());
+    const res = await fetch(`/api/${path}?${new URLSearchParams(params)}`, { signal: ctrl.signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `status ${res.status}`);
+    return data;
   } catch (e) {
-    throw new Error(ctrl.signal.aborted && !(e instanceof AggregateError) ? 'waktu habis' : 'semua server gagal');
+    throw new Error(e.name === 'AbortError' ? 'waktu habis' : e.message);
   } finally {
     clearTimeout(timer);
   }
 }
+
+const apiPlaces = (lat, lon, r, cats) => api('places', { lat: round3(lat), lon: round3(lon), r, cats: cats.join(',') });
 
 function readCache(key) {
   try {
@@ -371,13 +365,12 @@ async function searchArea(q) {
   els.list.innerHTML = skeleton(3);
   setStatus(`Mencari <b>${esc(q)}</b>…`);
   try {
-    const url = `${NOMINATIM}?format=jsonv2&limit=1&countrycodes=id&accept-language=id&q=${encodeURIComponent(q)}`;
-    const [hit] = await (await fetch(url, { headers: { Accept: 'application/json' } })).json();
-    if (!hit) { els.list.innerHTML = ''; setStatus(`Area <b>${esc(q)}</b> tidak ditemukan. Coba lebih lengkap, mis. "Dago, Bandung".`, true); return; }
-    setOrigin(Number(hit.lat), Number(hit.lon), hit.display_name.split(',').slice(0, 2).map((s) => s.trim()).join(', '));
-  } catch {
+    const hit = await api('geocode', { q });
+    if (!hit.found) { els.list.innerHTML = ''; setStatus(`Area <b>${esc(q)}</b> tidak ditemukan. Coba lebih lengkap, mis. "Dago, Bandung".`, true); return; }
+    setOrigin(hit.lat, hit.lon, hit.label);
+  } catch (e) {
     els.list.innerHTML = '';
-    setStatus('Pencarian area gagal. Periksa koneksi lalu coba lagi.', true);
+    setStatus(`Pencarian area gagal (${esc(e.message)}). Coba lagi sebentar.`, true);
   }
 }
 

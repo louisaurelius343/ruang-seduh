@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Privasi · Ruang Seduh</title>
+  <meta name="description" content="Bagaimana Ruang Seduh memakai lokasimu dan data apa yang disimpan.">
+  <link rel="canonical" href="https://ruangseduh.cloud/privasi.html">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="prose">
+    <p class="eyebrow"><a href="/">← Ruang Seduh</a></p>
+    <h1>Privasi</h1>
+    <p class="lede">Singkatnya: lokasimu hanya dipakai untuk mencari tempat terdekat, dibulatkan dulu, dan tidak disimpan.</p>
+
+    <h2>Lokasi</h2>
+    <ul>
+      <li>Tombol <b>Di sekitarku</b> meminta izin lokasi dari browser. Kamu bisa menolak dan mencari area secara manual.</li>
+      <li>Sebelum dikirim ke server, koordinat <b>dibulatkan sekitar 100 meter</b>. Lokasi persismu tidak pernah keluar dari perangkatmu.</li>
+      <li>Koordinat yang sudah dibulatkan dipakai untuk mencari tempat di OpenStreetMap (Overpass API). Hasilnya disimpan sementara (cache, maksimal 24 jam) agar pencarian berikutnya di area yang sama lebih cepat. Cache ini berisi daftar tempat, <b>bukan</b> siapa yang mencari.</li>
+    </ul>
+
+    <h2>Pencarian area</h2>
+    <p>Teks area yang kamu ketik dikirim ke layanan Nominatim (OpenStreetMap) lewat server kami untuk diubah jadi koordinat, dan hasilnya disimpan sementara (maksimal 7 hari).</p>
+
+    <h2>Yang disimpan di perangkatmu</h2>
+    <ul>
+      <li><b>Favorit</b> dan <b>cache hasil</b> disimpan di browser-mu (localStorage). Tidak ada akun, tidak dikirim ke server. Hapus kapan saja lewat pengaturan browser.</li>
+    </ul>
+
+    <h2>Yang tidak kami lakukan</h2>
+    <ul>
+      <li>Tidak ada akun, iklan, pelacak pihak ketiga, atau cookie analitik.</li>
+      <li>Tidak menjual atau membagikan data.</li>
+    </ul>
+
+    <h2>Pihak ketiga</h2>
+    <ul>
+      <li><b>Cloudflare</b> menjalankan situs ini dan mencatat log teknis standar (mis. alamat IP) untuk keamanan dan pembatasan laju.</li>
+      <li>Gambar peta dimuat langsung dari server tile <b>OpenStreetMap</b>; foto tempat (bila ada) dari <b>Wikimedia Commons</b>. Keduanya melihat alamat IP-mu seperti situs web biasa.</li>
+      <li>Tombol <b>Arahkan</b> membuka Google Maps; setelah itu berlaku kebijakan privasi Google.</li>
+    </ul>
+
+    <p class="note">Terakhir diperbarui 15 November 2026. Pertanyaan: buka isu di <a href="https://github.com/louisaurelius343/ruang-seduh/issues" rel="noopener">GitHub</a>.</p>
+  </main>
+</body>
+</html>

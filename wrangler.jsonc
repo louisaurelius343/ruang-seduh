@@ -1,11 +1,17 @@
 {
-  // Konfigurasi Cloudflare Workers (static assets). Situs ini statis: tanpa kode Worker.
+  // Cloudflare Worker + static assets.
+  //   /api/*  -> src/worker.js (proxy ber-cache ke Overpass & Nominatim)
+  //   lainnya -> file statis di ./public
   "name": "ruang-seduh",
-  "compatibility_date": "2026-11-01",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
   "assets": {
     "directory": "./public",
-    "not_found_handling": "404-page"
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
   },
+  "observability": { "enabled": true },
   // Wajib ada (boleh kosong) agar build branch non-main bisa membuat Preview.
   "previews": {}
 }
