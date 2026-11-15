@@ -62,7 +62,7 @@ async function places(request, url, ctx) {
  */
 async function hedgedOverpass(query) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 30000);
+  const timer = setTimeout(() => ctrl.abort(), 15000); // lebih cepat gagal -> browser pakai jalur cadangan
   const body = new URLSearchParams({ data: query });
   const ask = async (endpoint) => {
     const res = await fetch(endpoint, { method: 'POST', body, signal: ctrl.signal, headers: { 'user-agent': UA, accept: 'application/json' } });
@@ -73,6 +73,7 @@ async function hedgedOverpass(query) {
   };
   try {
     return await new Promise((resolve, reject) => {
+      const errs = [];
       let started = 0;
       let failed = 0;
       let next = null;
@@ -80,10 +81,11 @@ async function hedgedOverpass(query) {
         if (started >= OVERPASS.length) return;
         const endpoint = OVERPASS[started++];
         clearTimeout(next);
-        next = setTimeout(launch, 6000);
-        ask(endpoint).then(resolve, () => {
+        next = setTimeout(launch, 5000);
+        ask(endpoint).then(resolve, (e) => {
           failed += 1;
-          if (failed === OVERPASS.length) reject(new Error('server data peta sedang sibuk'));
+          errs.push(`${new URL(endpoint).hostname}: ${e.name === 'AbortError' ? 'timeout' : e.message}`);
+          if (failed === OVERPASS.length) reject(new Error(`server data peta sedang sibuk (${errs.join('; ')})`));
           else if (failed === started) launch(); // gagal cepat -> langsung coba berikutnya
         });
       };

@@ -12,6 +12,8 @@
     "run_worker_first": ["/api/*"]
   },
   "observability": { "enabled": true },
+  // Jangan hapus variabel yang diatur lewat dashboard saat deploy (mis. bila MAPILLARY_TOKEN tersimpan sebagai Text).
+  "keep_vars": true,
   // Wajib ada (boleh kosong) agar build branch non-main bisa membuat Preview.
   "previews": {}
 }

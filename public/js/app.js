@@ -1,5 +1,5 @@
 import {
-  parsePlaces, openStatus, weeklyTable, formatDistance, walkMinutes, directionsUrl, commonsThumb,
+  buildOverpassQuery, parsePlaces, openStatus, weeklyTable, formatDistance, walkMinutes, directionsUrl, commonsThumb,
 } from './core.js';
 
 // Data lewat Worker kita sendiri (/api/*): cache bersama di edge, rate limit, dan User-Agent yang sesuai
@@ -104,7 +104,7 @@ function statusOf(p, now) {
 
 async function api(path, params) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 40000);
+  const timer = setTimeout(() => ctrl.abort(), 35000);
   try {
     const res = await fetch(`/api/${path}?${new URLSearchParams(params)}`, { signal: ctrl.signal });
     const data = await res.json().catch(() => ({}));
@@ -117,7 +117,31 @@ async function api(path, params) {
   }
 }
 
-const apiPlaces = (lat, lon, r, cats) => api('places', { lat: round3(lat), lon: round3(lon), r, cats: cats.join(',') });
+// Cadangan: kalau Worker gagal menjangkau Overpass (IP Cloudflare kadang dibatasi), browser bertanya langsung.
+// Satu server dulu; server berikutnya hanya bila yang sebelumnya gagal.
+const OVERPASS_DIRECT = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+async function directOverpass(lat, lon, r, cats) {
+  const body = new URLSearchParams({ data: buildOverpassQuery(round3(lat), round3(lon), r, cats) });
+  let last;
+  for (const url of OVERPASS_DIRECT) {
+    try {
+      const res = await fetch(url, { method: 'POST', body, signal: AbortSignal.timeout(25000) });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const data = await res.json();
+      if (Array.isArray(data.elements)) return data;
+    } catch (e) { last = e; }
+  }
+  throw new Error(last?.name === 'TimeoutError' ? 'waktu habis' : 'server data peta sedang sibuk');
+}
+
+async function apiPlaces(lat, lon, r, cats) {
+  try {
+    return await api('places', { lat: round3(lat), lon: round3(lon), r, cats: cats.join(',') });
+  } catch (e) {
+    if (/terlalu banyak/.test(e.message)) throw e; // rate limit: jangan dibanjiri lewat jalur lain
+    return directOverpass(lat, lon, r, cats);
+  }
+}
 
 function readCache(key) {
   try {
