@@ -162,11 +162,53 @@ async function resolvePhotos(list) {
   }
 }
 
+// ---------- foto jalan sekitar (Mapillary lewat /api/photo), hanya untuk kartu yang terlihat ----------
+const mapillary = new Map();   // id tempat -> {url, id} | null (sudah dicek, tidak ada)
+const photoQueue = [];
+let photoActive = 0;
+const photoObserver = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    photoObserver.unobserve(e.target);
+    const id = e.target.dataset.cover;
+    if (!photoUrl.has(id) && !mapillary.has(id)) { photoQueue.push(id); pumpPhotos(); }
+  }
+}, { rootMargin: '200px' }) : null;
+
+function pumpPhotos() {
+  while (photoActive < 3 && photoQueue.length) {
+    const id = photoQueue.shift();
+    const p = places.find((x) => x.id === id);
+    if (!p || mapillary.has(id)) continue;
+    photoActive++;
+    mapillary.set(id, null);
+    api('photo', { lat: p.lat.toFixed(4), lon: p.lon.toFixed(4) })
+      .then((r) => {
+        if (!r.found || photoUrl.has(id)) return;
+        mapillary.set(id, { url: r.url, id: r.id });
+        photoUrl.set(id, r.url);
+        document.querySelectorAll(`[data-cover="${CSS.escape(id)}"]`).forEach((el) => { if (!el.querySelector('img')) setPhoto(el, r.url, true, r.id); });
+      })
+      .catch(() => {})
+      .finally(() => { photoActive--; pumpPhotos(); });
+  }
+}
+
+function observeCovers(root) {
+  if (!photoObserver) return;
+  root.querySelectorAll('[data-cover]:not(.has-photo)').forEach((el) => photoObserver.observe(el));
+}
+
+function creditHtml(id) {
+  const m = mapillary.get(id);
+  return m ? `<a class="credit" href="https://www.mapillary.com/app/?pKey=${encodeURIComponent(m.id)}" target="_blank" rel="noopener">Foto jalan sekitar · © Mapillary</a>` : '';
+}
+
 function coverHtml(p, cls = '') {
   const url = photoUrl.get(p.id);
-  return `<div class="cover c${p.cover}${url ? ' has-photo' : ''} ${cls}" data-cover="${esc(p.id)}">${icon(p.kind === 'makan' ? 'bowl' : 'cup')}${url ? `<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</div>`;
+  return `<div class="cover c${p.cover}${url ? ' has-photo' : ''} ${cls}" data-cover="${esc(p.id)}">${icon(p.kind === 'makan' ? 'bowl' : 'cup')}${url ? `<img src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">${creditHtml(p.id)}` : ''}</div>`;
 }
-function setPhoto(el, url) {
+function setPhoto(el, url, fromMapillary = false, mlyId = null) {
   const img = new Image();
   img.alt = '';
   img.loading = 'lazy';
@@ -174,6 +216,7 @@ function setPhoto(el, url) {
   img.src = url;
   el.classList.add('has-photo');
   el.append(img);
+  if (fromMapillary && mlyId) el.insertAdjacentHTML('beforeend', creditHtml(el.dataset.cover));
 }
 // foto gagal dimuat -> kembali ke ilustrasi
 document.addEventListener('error', (e) => {
@@ -181,6 +224,7 @@ document.addEventListener('error', (e) => {
   if (img.tagName === 'IMG' && img.parentElement?.dataset.cover) {
     photoUrl.delete(img.parentElement.dataset.cover);
     img.parentElement.classList.remove('has-photo');
+    img.parentElement.querySelector('.credit')?.remove();
     img.remove();
   }
 }, true);
@@ -232,6 +276,7 @@ function render(fit = false) {
     markers.set(p.id, m);
   }
   els.list.innerHTML = items.map(cardHtml).join('');
+  observeCovers(els.list);
 
   const hidden = places.length - items.length;
   if (!places.length) setStatus(`Belum ada tempat tercatat di sekitar <b>${esc(origin?.label ?? '')}</b>. Coba perbesar radius.`);
@@ -285,6 +330,7 @@ function openDetail(id, pan = true) {
       <p class="note">Data dari kontribusi komunitas OpenStreetMap dan bisa belum lengkap. Ada yang salah? <a href="https://www.openstreetmap.org/${esc(p.id)}" target="_blank" rel="noopener">Perbaiki di OSM</a>.</p>
     </div>`;
   show('detail');
+  observeCovers(els.detail);
   els.detail.scrollTop = 0;
   if (pan) map.setView([p.lat, p.lon], Math.max(map.getZoom(), 17));
   markers.get(id)?.openPopup();
@@ -391,6 +437,7 @@ function toggleFav(id) {
 els.list.addEventListener('click', (e) => {
   const fav = e.target.closest('[data-fav]');
   if (fav) { toggleFav(fav.dataset.fav); render(); return; }
+  if (e.target.closest('a')) return; // tautan atribusi foto
   const card = e.target.closest('.card[data-id]');
   if (card) openDetail(card.dataset.id);
 });

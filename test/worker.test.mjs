@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { placesParams, placesCacheKey, overpassQuery, geocodeParams, slimOverpass, createLimiter } from '../src/lib.js';
+import { placesParams, placesCacheKey, overpassQuery, geocodeParams, slimOverpass, createLimiter, photoParams, bbox, pickPhoto } from '../src/lib.js';
 
 const sp = (o) => new URLSearchParams(o);
 
@@ -48,4 +48,28 @@ test('rate limiter: token bucket per kunci', () => {
   assert.equal(allow('ip-lain'), true);
   t = 1000;
   assert.equal(allow('ip'), true);
+});
+
+test('photo: validasi & bbox', () => {
+  assert.ok(photoParams(new URLSearchParams({ lat: '48', lon: '2' })).error);
+  const p = photoParams(new URLSearchParams({ lat: '-6.885123', lon: '107.613456' }));
+  assert.equal(p.lat, -6.8851);
+  const [w, s, e, n] = bbox(-6.885, 107.613, 60);
+  assert.ok(w < 107.613 && e > 107.613 && s < -6.885 && n > -6.885);
+  assert.ok((n - s) * 111320 > 110 && (n - s) * 111320 < 130); // ~120 m
+});
+
+test('photo: pilih yang dekat & menghadap tempat, abaikan yang membelakangi', () => {
+  const place = [-6.885, 107.613];
+  const at = (dLatM, dLonM) => [107.613 + dLonM / 110400, -6.885 + dLatM / 111320];
+  const now = Date.UTC(2026, 10, 15);
+  const imgs = [
+    { id: 'jauh', thumb_1024_url: 'u1', compass_angle: 0, captured_at: now, computed_geometry: { coordinates: at(-70, 0) } },
+    { id: 'membelakangi', thumb_1024_url: 'u2', compass_angle: 180, captured_at: now, computed_geometry: { coordinates: at(-10, 0) } },
+    { id: 'pas', thumb_1024_url: 'u3', compass_angle: 2, captured_at: now, computed_geometry: { coordinates: at(-15, 0) } },
+    { id: 'tanpa-url', compass_angle: 0, computed_geometry: { coordinates: at(-5, 0) } },
+  ];
+  assert.equal(pickPhoto(imgs, ...place, now).id, 'pas');
+  assert.equal(pickPhoto([imgs[1]], ...place, now), null);
+  assert.equal(pickPhoto([], ...place, now), null);
 });

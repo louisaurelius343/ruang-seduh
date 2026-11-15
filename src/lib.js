@@ -61,6 +61,59 @@ export function slimOverpass(osm) {
   return { elements };
 }
 
+export const PHOTO_TTL = 12 * 3600; // URL thumbnail Mapillary bertanda tangan & bisa kedaluwarsa
+
+/** Validasi /api/photo: koordinat tempat (dibulatkan ~10 m untuk kunci cache). */
+export function photoParams(sp) {
+  const lat = Number(sp.get('lat'));
+  const lon = Number(sp.get('lon'));
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -12 || lat > 7 || lon < 94 || lon > 142) return { error: 'lat/lon tidak valid' };
+  const rl = Math.round(lat * 1e4) / 1e4;
+  const ro = Math.round(lon * 1e4) / 1e4;
+  return { lat: rl, lon: ro, key: `https://cache.ruangseduh.cloud/photo/v1/${rl.toFixed(4)}/${ro.toFixed(4)}` };
+}
+
+/** Kotak pencarian ~d meter di sekitar titik: [minLon, minLat, maxLon, maxLat]. */
+export function bbox(lat, lon, d = 60) {
+  const dLat = d / 111320;
+  const dLon = d / (111320 * Math.cos((lat * Math.PI) / 180));
+  return [lon - dLon, lat - dLat, lon + dLon, lat + dLat].map((x) => Number(x.toFixed(6)));
+}
+
+function bearing(lat1, lon1, lat2, lon2) {
+  const r = Math.PI / 180;
+  const y = Math.sin((lon2 - lon1) * r) * Math.cos(lat2 * r);
+  const x = Math.cos(lat1 * r) * Math.sin(lat2 * r) - Math.sin(lat1 * r) * Math.cos(lat2 * r) * Math.cos((lon2 - lon1) * r);
+  return ((Math.atan2(y, x) / r) + 360) % 360;
+}
+
+/**
+ * Pilih foto Mapillary terbaik untuk sebuah tempat: dekat, kamera menghadap ke tempat itu, dan tidak terlalu tua.
+ * images: [{id, thumb_1024_url, captured_at, compass_angle, computed_geometry:{coordinates:[lon,lat]}}]
+ */
+export function pickPhoto(images, lat, lon, nowMs = Date.now()) {
+  let best = null;
+  for (const im of images ?? []) {
+    const c = im.computed_geometry?.coordinates;
+    if (!im.thumb_1024_url || !c) continue;
+    const [ilon, ilat] = c;
+    const dy = (lat - ilat) * 111320;
+    const dx = (lon - ilon) * 111320 * Math.cos((lat * Math.PI) / 180);
+    const dist = Math.hypot(dx, dy);
+    if (dist > 80) continue;
+    let angle = 90; // tanpa arah kamera: anggap sedang
+    if (typeof im.compass_angle === 'number' && dist > 3) {
+      const diff = Math.abs(((bearing(ilat, ilon, lat, lon) - im.compass_angle + 540) % 360) - 180);
+      angle = diff;
+    }
+    if (angle > 100) continue; // kamera membelakangi tempat
+    const years = im.captured_at ? (nowMs - im.captured_at) / (365.25 * 864e5) : 5;
+    const score = dist + angle * 0.4 + Math.max(0, years - 2) * 6;
+    if (!best || score < best.score) best = { score, id: im.id, url: im.thumb_1024_url, captured: im.captured_at ?? null };
+  }
+  return best && { id: best.id, url: best.url, captured: best.captured, source: 'mapillary' };
+}
+
 /**
  * Pembatas laju sederhana per IP (token bucket di memori isolate).
  * Bukan jaminan global, tapi menahan satu klien yang membanjiri satu lokasi edge.

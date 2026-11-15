@@ -3,10 +3,12 @@
 //   GET /api/geocode?q               -> nama area -> koordinat (Nominatim), cache 7 hari
 // Semua rute lain diteruskan ke aset statis (public/).
 import {
-  OVERPASS, UA, PLACES_TTL, GEOCODE_TTL, placesParams, placesCacheKey, overpassQuery, geocodeParams, slimOverpass, createLimiter,
+  OVERPASS, UA, PLACES_TTL, GEOCODE_TTL, PHOTO_TTL, placesParams, placesCacheKey, overpassQuery, geocodeParams, slimOverpass,
+  createLimiter, photoParams, bbox, pickPhoto,
 } from './lib.js';
 
 const perIp = createLimiter({ capacity: 20, refillPerSec: 0.2 });   // 20 permintaan beruntun, lalu 12/menit
+const photoPerIp = createLimiter({ capacity: 40, refillPerSec: 1 }); // foto dimuat per kartu, jadi lebih longgar
 const toNominatim = createLimiter({ capacity: 1, refillPerSec: 1 }); // kebijakan Nominatim: maks 1 req/detik
 
 const json = (body, status = 200, extra = {}) => new Response(JSON.stringify(body), {
@@ -22,6 +24,7 @@ export default {
     try {
       if (url.pathname === '/api/places') return await places(request, url, ctx);
       if (url.pathname === '/api/geocode') return await geocode(request, url, ctx);
+      if (url.pathname === '/api/photo') return await photo(request, url, ctx, env);
       return json({ error: 'tidak ditemukan' }, 404);
     } catch (e) {
       return json({ error: e.message || 'kesalahan server' }, 502);
@@ -110,4 +113,29 @@ async function geocode(request, url, ctx) {
     : { found: false };
   store(ctx, g.key, JSON.stringify(out), out.found ? GEOCODE_TTL : 3600);
   return json(out, 200, { 'x-cache': 'MISS' });
+}
+
+/** Foto jalan terdekat dari Mapillary (token disimpan sebagai secret MAPILLARY_TOKEN, tidak pernah ke browser). */
+async function photo(request, url, ctx, env) {
+  const p = photoParams(url.searchParams);
+  if (p.error) return json({ error: p.error }, 400);
+  if (!env.MAPILLARY_TOKEN) return json({ found: false, reason: 'tidak dikonfigurasi' }, 200, { 'cache-control': 'public, max-age=3600' });
+  const hit = await cached(p.key);
+  if (hit) return json(await hit.json(), 200, { 'x-cache': 'HIT', 'cache-control': 'public, max-age=3600' });
+  if (!photoPerIp(clientIp(request))) return json({ error: 'terlalu banyak permintaan' }, 429, { 'retry-after': '5' });
+
+  const q = new URLSearchParams({
+    fields: 'id,thumb_1024_url,captured_at,compass_angle,computed_geometry',
+    bbox: bbox(p.lat, p.lon, 60).join(','),
+    limit: '30',
+  });
+  const res = await fetch(`https://graph.mapillary.com/images?${q}`, {
+    headers: { authorization: `OAuth ${env.MAPILLARY_TOKEN}`, 'user-agent': UA },
+  });
+  if (!res.ok) throw new Error(`mapillary ${res.status}`);
+  const best = pickPhoto((await res.json()).data, p.lat, p.lon);
+  const out = best ?? { found: false };
+  if (best) out.found = true;
+  store(ctx, p.key, JSON.stringify(out), best ? PHOTO_TTL : 7 * 24 * 3600); // "tidak ada foto" jarang berubah
+  return json(out, 200, { 'x-cache': 'MISS', 'cache-control': 'public, max-age=3600' });
 }
