@@ -136,6 +136,6 @@ async function photo(request, url, ctx, env) {
   const best = pickPhoto((await res.json()).data, p.lat, p.lon);
   const out = best ?? { found: false };
   if (best) out.found = true;
-  store(ctx, p.key, JSON.stringify(out), best ? PHOTO_TTL : 7 * 24 * 3600); // "tidak ada foto" jarang berubah
+  store(ctx, p.key, JSON.stringify(out), best ? PHOTO_TTL : 24 * 3600); // hasil kosong: 1 hari
   return json(out, 200, { 'x-cache': 'MISS', 'cache-control': 'public, max-age=3600' });
 }
