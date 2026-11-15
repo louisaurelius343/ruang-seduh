@@ -1,0 +1,11 @@
+{
+  // Konfigurasi Cloudflare Workers (static assets). Situs ini statis: tanpa kode Worker.
+  "name": "ruang-seduh",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "404-page"
+  },
+  // Wajib ada (boleh kosong) agar build branch non-main bisa membuat Preview.
+  "previews": {}
+}
